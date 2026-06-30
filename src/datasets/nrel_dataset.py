@@ -1,4 +1,19 @@
-"""Folsom 数据集加载器 (TSI-880 全天空成像仪)"""
+"""
+NREL TSI-880 数据集加载器
+来源: NREL Solar Radiation Research Laboratory (SRRL)
+设备: TSI-880 全天空成像仪, 原始分辨率 1024x1024
+用途: 跨域泛化验证
+
+目录结构:
+    data/nrel_tsi/
+    ├── images/           # TSI-880 拍摄的全天空图像
+    │   ├── 20180101_0800.jpg
+    │   ├── 20180101_0801.jpg
+    │   └── ...
+    └── irradiance.csv    # GHI/DNI 辐照度数据 (optional)
+
+数据获取: https://midcdmz.nrel.gov/
+"""
 import os
 import numpy as np
 from pathlib import Path
@@ -9,22 +24,16 @@ from torch.utils.data import Dataset
 import torchvision.transforms as T
 
 
-class FolsomDataset(Dataset):
+class NRELTSIDataset(Dataset):
     """
-    Folsom 数据集：TSI-880 全天空成像仪
-    主要用于跨域泛化验证
-
-    目录结构预期:
-        data/folsom/
-        ├── images/
-        │   ├── 20180101_080000.jpg
-        │   └── ...
-        └── irradiance.csv    # GHI数据 (optional)
+    NREL TSI-880 全天空成像仪数据集
+    原始分辨率 1024x1024，resize 到 img_size
+    主要用于跨域泛化验证 (不同站点、不同气候)
     """
 
-    def __init__(self, root, split='test', img_size=128,
+    def __init__(self, root, split='test', img_size=256,
                  in_seq_len=10, out_seq_len=10, temporal_stride=1,
-                 cloud_threshold=0.5):
+                 cloud_threshold=0.3):
         super().__init__()
         self.root = Path(root)
         self.split = split
@@ -44,15 +53,23 @@ class FolsomDataset(Dataset):
         ])
 
     def _load_image_paths(self):
+        """递归搜索所有图像并按文件名排序 (时间顺序)"""
         img_dir = self.root / 'images'
         if not img_dir.exists():
             img_dir = self.root
-        paths = sorted(img_dir.glob('*.jpg')) + sorted(img_dir.glob('*.png'))
+
+        extensions = ['*.jpg', '*.jpeg', '*.png', '*.bmp']
+        paths = []
+        for ext in extensions:
+            paths.extend(sorted(img_dir.rglob(ext)))
+        paths.sort()
+
         if len(paths) == 0:
             raise FileNotFoundError(f"No images found in {img_dir}")
         return paths
 
     def _build_sequences(self):
+        """按时间顺序划分 train/val/test (7:1:2)"""
         total_images = len(self.image_paths)
         required_len = self.total_len * self.temporal_stride
         all_starts = list(range(0, total_images - required_len + 1))
@@ -69,6 +86,7 @@ class FolsomDataset(Dataset):
             return all_starts[n_train + n_val:]
 
     def _compute_cloud_mask(self, img_tensor):
+        """R-B ratio 云检测"""
         r = img_tensor[0]
         b = img_tensor[2]
         ratio = (r - b) / (r + b + 1e-8)

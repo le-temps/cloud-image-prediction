@@ -1,0 +1,19 @@
+dataset:
+  name: nrel_tsi
+  root: ./data/nrel_tsi
+  img_size: 256           # 从 1024x1024 原始图像 resize
+  in_seq_len: 10          # 过去10帧 (10min)
+  out_seq_len: 10         # 预测10帧 (10min)
+  channels: 3
+  split_ratio: [0.7, 0.1, 0.2]
+  temporal_stride: 1      # 每帧间隔1min
+  normalize: true
+  cloud_threshold: 0.3
+  # 原始数据:
+  #   来源: NREL Solar Radiation Research Laboratory (SRRL)
+  #   设备: TSI-880 全天空成像仪
+  #   原始分辨率: 1024x1024
+  #   采样频率: 1-10min
+  #   在线获取: https://midcdmz.nrel.gov/
+  #   附带: GHI/DNI 等多种辐射分量
+  #   用途: 跨域泛化验证 (不同站点、不同气候)

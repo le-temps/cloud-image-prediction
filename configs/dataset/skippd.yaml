@@ -1,11 +1,19 @@
 dataset:
-  name: skippd
-  root: ./data/skippd
-  img_size: 128
-  in_seq_len: 10        # 过去10帧 (10min)
-  out_seq_len: 10       # 预测10帧 (10min)
+  name: skippd_raw
+  root: ./data/skippd_raw
+  img_size: 256           # 从 2048x2048 原始图像 resize
+  in_seq_len: 10          # 过去10帧 (10min)
+  out_seq_len: 10         # 预测10帧 (10min)
   channels: 3
   split_ratio: [0.7, 0.1, 0.2]  # train/val/test 按时间顺序
-  temporal_stride: 1    # 每帧间隔1min
+  temporal_stride: 1      # 每帧间隔1min
   normalize: true
-  cloud_threshold: 0.5  # 云mask二值化阈值 (用于R-B ratio)
+  cloud_threshold: 0.3    # 云mask二值化阈值 (R-B ratio)
+  # 原始数据:
+  #   来源: Stanford University SKIPP'D Raw Dataset
+  #   原始分辨率: 2048x2048 鱼眼相机 (Hikvision DS-2CD6362F-IV)
+  #   采样频率: 1min (从20fps视频中抽帧)
+  #   时间范围: 2017.03 - 2019.12
+  #   Benchmark下载: https://purl.stanford.edu/dj417rh1007
+  #   Raw下载: https://purl.stanford.edu/sm043zf7254
+  #   附带: PV功率 (30.1kW 屋顶光伏), 1min频率

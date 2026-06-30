@@ -1,4 +1,9 @@
-"""SKIPP'D 数据集加载器"""
+"""
+SKIPP'D 数据集加载器
+支持两种模式:
+  1. Raw 模式: 加载 2048x2048 原始 jpg 图像 (推荐, 高分辨率)
+  2. HDF5 模式: 加载 benchmark hdf5 文件 (64x64, 用于快速验证)
+"""
 import os
 import numpy as np
 from pathlib import Path
@@ -8,26 +13,44 @@ import torch
 from torch.utils.data import Dataset
 import torchvision.transforms as T
 
+try:
+    import h5py
+    HAS_H5PY = True
+except ImportError:
+    HAS_H5PY = False
+
 
 class SKIPPDDataset(Dataset):
     """
     SKIPP'D 数据集：天空图像 + PV 功率
     按时间序列组织，每个样本为连续 (in_seq_len + out_seq_len) 帧
 
-    目录结构预期:
-        data/skippd/
-        ├── images/           # 所有图像按时间戳命名
-        │   ├── 20200101_120000.jpg
-        │   ├── 20200101_120100.jpg
+    Raw 模式目录结构 (推荐):
+        data/skippd_raw/
+        ├── images/               # 从 raw tar 解压的 2048x2048 jpg 图像
+        │   ├── 2017_03/
+        │   │   ├── 20170301_060000.jpg
+        │   │   └── ...
+        │   ├── 2017_04/
         │   └── ...
-        ├── metadata.csv      # 时间戳, PV功率, GHI 等
-        └── splits/
-            ├── train.txt     # 训练集序列索引
-            ├── val.txt
-            └── test.txt
+        └── pv/
+            ├── 2017_pv_raw.csv
+            ├── 2018_pv_raw.csv
+            └── 2019_pv_raw.csv
+
+    HDF5 模式目录结构:
+        data/skippd/
+        └── 2017_2019_images_pv_processed.hdf5
+
+    数据来源:
+        Stanford University, 鱼眼相机 Hikvision DS-2CD6362F-IV
+        原始分辨率: 2048x2048, 采样频率: 1min
+        时间范围: 2017.03 - 2019.12
+        Benchmark: https://purl.stanford.edu/dj417rh1007
+        Raw: https://purl.stanford.edu/sm043zf7254
     """
 
-    def __init__(self, root, split='train', img_size=128,
+    def __init__(self, root, split='train', img_size=256,
                  in_seq_len=10, out_seq_len=10, temporal_stride=1,
                  transform=None, cloud_threshold=0.5):
         """
@@ -71,7 +94,13 @@ class SKIPPDDataset(Dataset):
             # 如果目录不存在，尝试直接读取根目录下的图像
             img_dir = self.root
 
-        paths = sorted(img_dir.glob('*.jpg')) + sorted(img_dir.glob('*.png'))
+        # 递归搜索子目录 (raw 数据按 year_month 子目录组织)
+        extensions = ['*.jpg', '*.jpeg', '*.png']
+        paths = []
+        for ext in extensions:
+            paths.extend(img_dir.rglob(ext))
+        paths.sort()
+
         if len(paths) == 0:
             raise FileNotFoundError(f"No images found in {img_dir}")
         return paths
