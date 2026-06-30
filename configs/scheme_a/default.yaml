@@ -1,0 +1,33 @@
+model:
+  name: scheme_a
+  arch: CloudMambaNet
+  dim: 256
+  depth: 4
+  patch_size: 4
+  dcn_groups: 4
+  dual_head: true       # 双头: 云图重建 + 云mask分割
+
+training:
+  epochs: 200
+  batch_size: 16        # per GPU
+  optimizer:
+    name: adamw
+    lr: 1.0e-3
+    weight_decay: 1.0e-4
+  scheduler:
+    name: cosine
+    T_max: 200
+    eta_min: 1.0e-6
+  grad_clip: 1.0
+  mixed_precision: bf16
+  seed: 42
+
+loss:
+  mse_weight: 1.0
+  ssim_weight: 0.5
+  lpips_weight: 0.1
+  bce_weight: 0.5       # 云mask BCE loss
+
+distributed:
+  backend: nccl
+  num_gpus: 2

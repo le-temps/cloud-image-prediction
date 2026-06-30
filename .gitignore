@@ -1,0 +1,27 @@
+# Data
+data/
+outputs/
+wandb/
+*.pth
+*.pt
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+*.log

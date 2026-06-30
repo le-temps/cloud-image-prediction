@@ -1,0 +1,11 @@
+dataset:
+  name: skippd
+  root: ./data/skippd
+  img_size: 128
+  in_seq_len: 10        # 过去10帧 (10min)
+  out_seq_len: 10       # 预测10帧 (10min)
+  channels: 3
+  split_ratio: [0.7, 0.1, 0.2]  # train/val/test 按时间顺序
+  temporal_stride: 1    # 每帧间隔1min
+  normalize: true
+  cloud_threshold: 0.5  # 云mask二值化阈值 (用于R-B ratio)

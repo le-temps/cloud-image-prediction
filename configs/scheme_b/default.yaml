@@ -1,0 +1,35 @@
+model:
+  name: scheme_b
+  arch: CloudPhysicsNet
+  cuboid_size: [2, 4, 4]
+  num_heads: 8
+  afno_blocks: 8
+  afno_hidden_ratio: 1.0
+  phycell_kernel: 7
+  phycell_dim: 64
+  multiscale_patches: [2, 4, 8]
+
+training:
+  epochs: 200
+  batch_size: 16
+  optimizer:
+    name: adamw
+    lr: 1.0e-3
+    weight_decay: 1.0e-4
+  scheduler:
+    name: cosine
+    T_max: 200
+    eta_min: 1.0e-6
+  grad_clip: 1.0
+  mixed_precision: bf16
+  seed: 42
+
+loss:
+  mse_weight: 1.0
+  ssim_weight: 0.5
+  lpips_weight: 0.1
+  physics_weight: 0.1   # 平流方程约束
+
+distributed:
+  backend: nccl
+  num_gpus: 2

@@ -1,0 +1,38 @@
+model:
+  name: scheme_c
+  arch: CloudDiffNet
+  # 云分割器
+  segmentor:
+    arch: unet
+    pretrained: true
+    freeze: true
+  # 扩散模型
+  diffusion:
+    timesteps: 1000
+    inference_steps: 50   # DDIM
+    beta_schedule: cosine
+    unet_channels: [64, 128, 256, 512]
+    attention_resolutions: [16, 8]
+    num_samples: 20       # 概率预测采样次数
+
+training:
+  epochs: 200
+  batch_size: 8           # 扩散模型显存占用大
+  optimizer:
+    name: adamw
+    lr: 5.0e-4
+    weight_decay: 1.0e-4
+  scheduler:
+    name: cosine
+    T_max: 200
+    eta_min: 1.0e-6
+  grad_clip: 1.0
+  mixed_precision: bf16
+  seed: 42
+
+loss:
+  noise_pred_weight: 1.0  # DDPM ε-prediction loss
+
+distributed:
+  backend: nccl
+  num_gpus: 2
