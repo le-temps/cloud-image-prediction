@@ -33,7 +33,7 @@ class NRELTSIDataset(Dataset):
 
     def __init__(self, root, split='test', img_size=256,
                  in_seq_len=10, out_seq_len=10, temporal_stride=1,
-                 cloud_threshold=0.3):
+                 cloud_threshold=0.05):
         super().__init__()
         self.root = Path(root)
         self.split = split
@@ -43,6 +43,9 @@ class NRELTSIDataset(Dataset):
         self.total_len = in_seq_len + out_seq_len
         self.temporal_stride = temporal_stride
         self.cloud_threshold = cloud_threshold
+
+        # TSI-880 也是全天空成像仪，有效区域为圆形
+        self.fisheye_mask = self._build_fisheye_mask(img_size)
 
         self.image_paths = self._load_image_paths()
         self.sequences = self._build_sequences()
@@ -85,13 +88,27 @@ class NRELTSIDataset(Dataset):
         else:
             return all_starts[n_train + n_val:]
 
+    @staticmethod
+    def _build_fisheye_mask(size):
+        """TSI-880 圆形有效区域 mask (1024x1024 中约 radius~460)"""
+        y, x = torch.meshgrid(
+            torch.arange(size, dtype=torch.float32),
+            torch.arange(size, dtype=torch.float32),
+            indexing='ij',
+        )
+        center = size / 2.0
+        radius = size * 460.0 / 1024.0  # ≈ 0.449 * size
+        dist = torch.sqrt((x - center) ** 2 + (y - center) ** 2)
+        return (dist <= radius).float()
+
     def _compute_cloud_mask(self, img_tensor):
-        """R-B ratio 云检测"""
+        """NRBR 云检测, 带圆形 mask"""
         r = img_tensor[0]
         b = img_tensor[2]
         ratio = (r - b) / (r + b + 1e-8)
-        mask = (ratio > self.cloud_threshold).float().unsqueeze(0)
-        return mask
+        cloud = (ratio > self.cloud_threshold).float()
+        cloud = cloud * self.fisheye_mask
+        return cloud.unsqueeze(0)
 
     def __len__(self):
         return len(self.sequences)

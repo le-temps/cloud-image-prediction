@@ -8,7 +8,7 @@ dataset:
   split_ratio: [0.7, 0.1, 0.2]  # train/val/test 按时间顺序
   temporal_stride: 1      # 每帧间隔1min
   normalize: true
-  cloud_threshold: 0.3    # 云mask二值化阈值 (R-B ratio)
+  cloud_threshold: 0.05    # NRBR 云检测阈值, 参考 Nie et al. 2020
   # 原始数据:
   #   来源: Stanford University SKIPP'D Raw Dataset
   #   原始分辨率: 2048x2048 鱼眼相机 (Hikvision DS-2CD6362F-IV)

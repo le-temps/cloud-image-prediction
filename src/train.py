@@ -12,12 +12,6 @@ from pathlib import Path
 from tqdm import tqdm
 
 from datasets import build_dataset
-from models.baselines.convlstm import ConvLSTM
-from models.baselines.predrnn import PredRNN
-from models.baselines.simvp import SimVP
-from models.scheme_a.cloud_mamba_net import CloudMambaNet
-from models.scheme_b.cloud_physics_net import CloudPhysicsNet
-from models.scheme_c.cloud_diff_net import CloudDiffNet
 from models.modules.losses import CombinedLoss, PhysicsLoss
 from models.modules.metrics import MetricCalculator
 from utils.distributed import (setup_distributed, cleanup_distributed,
@@ -25,20 +19,47 @@ from utils.distributed import (setup_distributed, cleanup_distributed,
 from utils.logger import setup_logger, ExperimentTracker, save_checkpoint
 
 
-MODEL_REGISTRY = {
-    'convlstm': ConvLSTM,
-    'predrnn': PredRNN,
-    'simvp': lambda **kw: SimVP(use_tau=False, **kw),
-    'simvp_tau': lambda **kw: SimVP(use_tau=True, **kw),
-    'scheme_a': CloudMambaNet,
-    'scheme_b': CloudPhysicsNet,
-    'scheme_c': CloudDiffNet,
-}
+def _lazy_import(model_name):
+    """延迟导入模型，避免缺少依赖时导入失败"""
+    if model_name == 'convlstm':
+        from models.baselines.convlstm import ConvLSTM
+        return ConvLSTM
+    elif model_name == 'predrnn':
+        from models.baselines.predrnn import PredRNN
+        return PredRNN
+    elif model_name == 'simvp':
+        from models.baselines.simvp import SimVP
+        return lambda **kw: SimVP(use_tau=False, **kw)
+    elif model_name == 'simvp_tau':
+        from models.baselines.simvp import SimVP
+        return lambda **kw: SimVP(use_tau=True, **kw)
+    elif model_name == 'scheme_a':
+        from models.scheme_a.cloud_mamba_net import CloudMambaNet
+        return CloudMambaNet
+    elif model_name == 'scheme_b':
+        from models.scheme_b.cloud_physics_net import CloudPhysicsNet
+        return CloudPhysicsNet
+    elif model_name == 'scheme_c':
+        from models.scheme_c.cloud_diff_net import CloudDiffNet
+        return CloudDiffNet
+    else:
+        raise ValueError(f"Unknown model: {model_name}")
+
+
+MODEL_REGISTRY = [
+    'convlstm', 'predrnn', 'simvp', 'simvp_tau',
+    'scheme_a', 'scheme_b', 'scheme_c',
+]
 
 
 def build_model(config):
     """构建模型"""
     model_name = config['model']['name']
+    if model_name not in MODEL_REGISTRY:
+        raise ValueError(f"Unknown model: {model_name}. Available: {MODEL_REGISTRY}")
+
+    model_fn = _lazy_import(model_name)
+
     model_cfg = config['model'].copy()
     model_cfg.pop('name')
     model_cfg.pop('arch', None)
@@ -67,7 +88,6 @@ def build_model(config):
     for key in ['dual_head']:
         model_cfg.pop(key, None)
 
-    model_fn = MODEL_REGISTRY[model_name]
     return model_fn(**model_cfg)
 
 
